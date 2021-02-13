@@ -1,4 +1,3 @@
-use crate::color::conv::IntoLinSrgba;
 use crate::draw::drawing::DrawingContext;
 use crate::draw::mesh::vertex::TexCoords;
 use crate::draw::primitive::path::{self, PathEventSource};
@@ -11,8 +10,10 @@ use crate::draw::{self, Drawing};
 use crate::geom::{self, Point2};
 use crate::math::{BaseFloat, Zero};
 use crate::wgpu;
+use crate::{color::conv::IntoLinSrgba, draw::svg_renderer::SvgRenderContext};
 use lyon::path::PathEvent;
 use lyon::tessellation::StrokeOptions;
+use svg::node::element::Path as SVGPath;
 
 /// A trait implemented for all polygon draw primitives.
 pub trait SetPolygon<S>: Sized {
@@ -446,6 +447,100 @@ impl draw::renderer::RenderPrimitive for Polygon<f32> {
         mesh: &mut draw::Mesh,
     ) -> draw::renderer::PrimitiveRender {
         self.render_themed(ctxt, mesh, &draw::theme::Primitive::Polygon)
+    }
+}
+
+impl draw::svg_renderer::SvgRenderPrimitive<SVGPath> for Polygon<f32> {
+    fn render_svg_element(self, ctx: SvgRenderContext) -> SVGPath {
+        let Polygon {
+            path_event_src,
+            opts:
+                PolygonOptions {
+                    position,
+                    orientation,
+                    no_fill,
+                    stroke_color,
+                    color,
+                    stroke,
+                },
+            texture_view,
+        } = self;
+
+        println!("{:?}", path_event_src);
+        // TODO: let color = fill
+        //             .0
+        //             .unwrap_or_else(|| ctx.theme.fill_lin_srgba(&theme_prim));
+        // let color = polygon.opts.color.unwrap_or(BLACK.into_lin_srgba());
+        // let col_string = color_string(color);
+        let local_transform = position.transform() * orientation.transform();
+
+        // TODO: other rotations using skew?
+        // let orientation = match polygon.opts.orientation {
+        //     orientation::Properties::Axes(v) => cgmath::Euler {
+        //         x: cgmath::Rad(v.x),
+        //         y: cgmath::Rad(v.y),
+        //         z: cgmath::Rad(v.z),
+        //     },
+        //     orientation::Properties::LookAt(p) => {
+        //         // TODO
+        //         cgmath::Euler {
+        //             x: cgmath::Rad(0.0),
+        //             y: cgmath::Rad(0.0),
+        //             z: cgmath::Rad(0.0),
+        //         }
+        //     }
+        // };
+        // println!("{:?}", orientation);
+        // let pos = cgmath::Transform::transform_point(&local_transform, Point3::new(0.0, 0.0, 0.0));
+        // let mut el = SVGEllipse::new()
+        //     .set("fill", col_string)
+        //     .set("cx", pos.x)
+        //     .set("cy", pos.y)
+        //     // TODO: better way to set radi
+        //     .set("rx", dimensions.x.unwrap_or(100.0) / 2.0)
+        //     .set("ry", dimensions.y.unwrap_or(100.0) / 2.0)
+        //     // TODO: figure out rotation
+        //     .set(
+        //         "transform",
+        //         format!("rotate({})", -rad_to_deg(orientation.z.0)),
+        //     );
+        // if let Some(stroke) = polygon.opts.stroke {
+        //     el = el.set("stroke-width", stroke.line_width);
+        // }
+        // if let Some(stroke_color) = polygon.opts.stroke_color {
+        //     el = el.set("stroke", color_string(stroke_color));
+        // }
+
+        let mut closed_path = false;
+        let points = match path_event_src {
+            PathEventSource::Buffered(_) => 0..0,
+            PathEventSource::ColoredPoints { range, close } => {
+                closed_path = close;
+                range
+            }
+            PathEventSource::TexturedPoints { range, close } => {
+                closed_path = close;
+                range
+            }
+        };
+        // let mut iter = quad.0.iter();
+
+        // let first = iter.next().unwrap().extend(0.0);
+        //             let first_t =
+        //                 cgmath::Transform::transform_point(&local_transform, first.into());
+
+        // let mut data = Data::new().move_to((first_t.x, -first_t.y));
+        // for t in iter {
+        //     let p = t.extend(0.0);
+        //     let tp = cgmath::Transform::transform_point(&local_transform, p.into());
+        //     data = data.line_to((tp.x, -tp.y));
+        // }
+        // data = data.line_to((first_t.x, -first_t.y));
+        // data = data.close();
+
+        let el = SVGPath::new(); //.set("d", data);
+
+        el
     }
 }
 

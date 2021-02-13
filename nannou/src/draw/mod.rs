@@ -25,6 +25,7 @@ pub mod mesh;
 pub mod primitive;
 pub mod properties;
 pub mod renderer;
+pub mod svg_renderer;
 pub mod theme;
 
 /// A simple API for drawing 2D and 3D graphics.

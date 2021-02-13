@@ -1,14 +1,19 @@
-use crate::color::conv::IntoLinSrgba;
-use crate::draw::primitive::polygon::{self, PolygonInit, PolygonOptions, SetPolygon};
 use crate::draw::primitive::Primitive;
 use crate::draw::properties::spatial::{dimension, orientation, position};
 use crate::draw::properties::{
     spatial, ColorScalar, LinSrgba, SetColor, SetDimensions, SetOrientation, SetPosition, SetStroke,
 };
 use crate::draw::{self, Drawing};
+use crate::draw::{
+    primitive::polygon::{self, PolygonInit, PolygonOptions, SetPolygon},
+    svg_renderer::SvgRenderContext,
+};
 use crate::geom::{self, Point2, Vector2};
 use crate::math::{BaseFloat, ElementWise};
+use crate::{color::conv::IntoLinSrgba, draw::svg_renderer::color_string};
 use lyon::tessellation::StrokeOptions;
+use palette::named::BLACK;
+use svg::node::element::{path::Data, Path as SVGPath};
 
 /// Properties related to drawing a **Quad**.
 #[derive(Clone, Debug)]
@@ -90,6 +95,68 @@ impl draw::renderer::RenderPrimitive for Quad<f32> {
         );
 
         draw::renderer::PrimitiveRender::default()
+    }
+}
+
+impl draw::svg_renderer::SvgRenderPrimitive<SVGPath> for Quad<f32> {
+    fn render_svg_element(self, ctx: SvgRenderContext) -> SVGPath {
+        let Quad {
+            mut quad,
+            polygon,
+            dimensions,
+        } = self;
+
+        let color = polygon.opts.color.unwrap_or(BLACK.into_lin_srgba());
+        let col_string = color_string(color);
+        let global_transform = ctx.transform;
+        let local_transform =
+            polygon.opts.position.transform() * polygon.opts.orientation.transform();
+        let transform = global_transform * local_transform;
+
+        let transform_point =
+            |v: Vector2<f32>| cgmath::Transform::transform_point(&transform, v.extend(0.0).into());
+
+        let (maybe_x, maybe_y, _maybe_z) = (dimensions.x, dimensions.y, dimensions.z);
+        if maybe_x.is_some() || maybe_y.is_some() {
+            let cuboid = quad.bounding_rect();
+            let centroid = quad.centroid();
+            let x_scale = maybe_x.map(|x| x / cuboid.w()).unwrap_or(1.0);
+            let y_scale = maybe_y.map(|y| y / cuboid.h()).unwrap_or(1.0);
+            let scale = Vector2 {
+                x: x_scale,
+                y: y_scale,
+            };
+            let (a, b, c, d) = quad.into();
+            let translate = |v: Point2| centroid + ((v - centroid).mul_element_wise(scale));
+            let new_a = translate(a);
+            let new_b = translate(b);
+            let new_c = translate(c);
+            let new_d = translate(d);
+            quad = geom::Quad([new_a, new_b, new_c, new_d]);
+        }
+
+        let mut points = quad.vertices();
+
+        let mut data = Data::new();
+        // TODO: handle unwrap
+        let first = transform_point(points.next().unwrap());
+        data = data.move_to((first.x, -first.y));
+        for p in points {
+            let tp = transform_point(p);
+            data = data.line_to((tp.x, -tp.y));
+        }
+        data = data.line_to((first.x, -first.y));
+        data = data.close();
+
+        let mut el = SVGPath::new().set("fill", col_string).set("d", data);
+        if let Some(stroke) = polygon.opts.stroke {
+            el = el.set("stroke-width", stroke.line_width);
+        }
+        if let Some(stroke_color) = polygon.opts.stroke_color {
+            el = el.set("stroke", color_string(stroke_color));
+        }
+
+        el
     }
 }
 

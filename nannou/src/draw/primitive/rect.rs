@@ -13,8 +13,8 @@ use lyon::tessellation::StrokeOptions;
 /// Properties related to drawing a **Rect**.
 #[derive(Clone, Debug)]
 pub struct Rect<S = geom::scalar::Default> {
-    dimensions: dimension::Properties<S>,
-    polygon: PolygonInit<S>,
+    pub dimensions: dimension::Properties<S>,
+    pub polygon: PolygonInit<S>,
 }
 
 /// The drawing context for a Rect.

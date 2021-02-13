@@ -1,15 +1,22 @@
-use crate::color::conv::IntoLinSrgba;
-use crate::draw;
 use crate::draw::primitive::polygon::{self, PolygonInit, PolygonOptions, SetPolygon};
 use crate::draw::primitive::Primitive;
-use crate::draw::properties::spatial::{dimension, orientation, position};
+use crate::draw::properties::spatial::orientation;
+use crate::draw::properties::spatial::{dimension, position};
 use crate::draw::properties::{
     spatial, ColorScalar, LinSrgba, SetColor, SetDimensions, SetOrientation, SetPosition, SetStroke,
 };
 use crate::draw::Drawing;
+use crate::draw::{self, svg_renderer::SvgRenderContext};
 use crate::geom::{self, Vector2};
-use crate::math::{BaseFloat, Zero};
+use crate::math::{rad_to_deg, BaseFloat, Zero};
+use crate::{color::conv::IntoLinSrgba, draw::svg_renderer::color_string};
+use cgmath::{Euler, Matrix3, Matrix4, Point3, Quaternion, Vector3};
 use lyon::tessellation::StrokeOptions;
+use palette::{named::BLACK, Alpha};
+use svg::{
+    node::element::{Element, Ellipse as SVGEllipse},
+    Node,
+};
 
 /// Properties related to drawing an **Ellipse**.
 #[derive(Clone, Debug)]
@@ -112,6 +119,65 @@ impl draw::renderer::RenderPrimitive for Ellipse<f32> {
         }
 
         draw::renderer::PrimitiveRender::default()
+    }
+}
+
+impl draw::svg_renderer::SvgRenderPrimitive<SVGEllipse> for Ellipse<f32> {
+    fn render_svg_element(self, ctx: SvgRenderContext) -> SVGEllipse {
+        let Ellipse {
+            dimensions,
+            resolution: _,
+            polygon,
+        } = self;
+
+        // TODO: let color = fill
+        //             .0
+        //             .unwrap_or_else(|| ctx.theme.fill_lin_srgba(&theme_prim));
+        let color = polygon.opts.color.unwrap_or(BLACK.into_lin_srgba());
+        let col_string = color_string(color);
+        let global_transform = ctx.transform;
+        let local_transform =
+            polygon.opts.position.transform() * polygon.opts.orientation.transform();
+        let transform = global_transform * local_transform;
+
+        // TODO: other rotations using skew?
+        let orientation = match polygon.opts.orientation {
+            orientation::Properties::Axes(v) => cgmath::Euler {
+                x: cgmath::Rad(v.x),
+                y: cgmath::Rad(v.y),
+                z: cgmath::Rad(v.z),
+            },
+            orientation::Properties::LookAt(p) => {
+                // TODO
+                cgmath::Euler {
+                    x: cgmath::Rad(0.0),
+                    y: cgmath::Rad(0.0),
+                    z: cgmath::Rad(0.0),
+                }
+            }
+        };
+        println!("{:?}", orientation);
+        let pos = cgmath::Transform::transform_point(&transform, Point3::new(0.0, 0.0, 0.0));
+        let mut el = SVGEllipse::new()
+            .set("fill", col_string)
+            .set("cx", pos.x)
+            .set("cy", pos.y)
+            // TODO: better way to set radii
+            .set("rx", dimensions.x.unwrap_or(100.0) / 2.0)
+            .set("ry", dimensions.y.unwrap_or(100.0) / 2.0)
+            // TODO: figure out rotation
+            .set(
+                "transform",
+                format!("rotate({})", -rad_to_deg(orientation.z.0)),
+            );
+        if let Some(stroke) = polygon.opts.stroke {
+            el = el.set("stroke-width", stroke.line_width);
+        }
+        if let Some(stroke_color) = polygon.opts.stroke_color {
+            el = el.set("stroke", color_string(stroke_color));
+        }
+
+        el
     }
 }
 
