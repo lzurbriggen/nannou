@@ -1,4 +1,3 @@
-use crate::color::conv::IntoLinSrgba;
 use crate::draw::primitive::polygon::{self, PolygonInit, PolygonOptions, SetPolygon};
 use crate::draw::primitive::Primitive;
 use crate::draw::properties::spatial::{dimension, orientation, position};
@@ -7,8 +6,13 @@ use crate::draw::properties::{
 };
 use crate::draw::{self, Drawing};
 use crate::geom::{self, Vector2};
-use crate::math::BaseFloat;
+use crate::math::{rad_to_deg, BaseFloat};
+use crate::{
+    color::conv::IntoLinSrgba,
+    draw::svg_renderer::{color_string, SvgRenderContext},
+};
 use lyon::tessellation::StrokeOptions;
+use svg::node::element::{path::Data, Rectangle as SVGRectangle};
 
 /// Properties related to drawing a **Rect**.
 #[derive(Clone, Debug)]
@@ -75,6 +79,52 @@ impl draw::renderer::RenderPrimitive for Rect<f32> {
         );
 
         draw::renderer::PrimitiveRender::default()
+    }
+}
+
+impl draw::svg_renderer::SvgRenderPrimitive<SVGRectangle> for Rect<f32> {
+    fn render_svg_element(self, ctx: SvgRenderContext) -> SVGRectangle {
+        let Rect {
+            polygon,
+            dimensions,
+        } = self;
+
+        let orientation = match polygon.opts.orientation {
+            orientation::Properties::Axes(v) => cgmath::Euler {
+                x: cgmath::Rad(v.x),
+                y: cgmath::Rad(v.y),
+                z: cgmath::Rad(v.z),
+            },
+            orientation::Properties::LookAt(p) => {
+                // TODO
+                cgmath::Euler {
+                    x: cgmath::Rad(0.0),
+                    y: cgmath::Rad(0.0),
+                    z: cgmath::Rad(0.0),
+                }
+            }
+        };
+
+        let color = polygon.opts.color.unwrap();
+        let col_string = color_string(color);
+        let el = SVGRectangle::new()
+            .set("fill", col_string)
+            .set(
+                "x",
+                polygon.opts.position.point.x - dimensions.x.unwrap_or(100.0) / 2.0,
+            )
+            .set(
+                "y",
+                -(polygon.opts.position.point.y + dimensions.y.unwrap_or(100.0) / 2.0),
+            )
+            .set("width", dimensions.x.unwrap_or(100.0))
+            .set("height", dimensions.y.unwrap_or(100.0))
+            .set(
+                "transform",
+                format!("rotate({})", -rad_to_deg(orientation.z.0)), // TODO: transform-origin with absolute position or use translate() (g-element?)
+            );
+
+        el
     }
 }
 

@@ -161,7 +161,7 @@ impl draw::svg_renderer::SvgRenderPrimitive<SVGEllipse> for Ellipse<f32> {
         let mut el = SVGEllipse::new()
             .set("fill", col_string)
             .set("cx", pos.x)
-            .set("cy", pos.y)
+            .set("cy", -pos.y)
             // TODO: better way to set radii
             .set("rx", dimensions.x.unwrap_or(100.0) / 2.0)
             .set("ry", dimensions.y.unwrap_or(100.0) / 2.0)

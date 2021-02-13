@@ -14,7 +14,7 @@ homepage = "https://github.com/nannou-org/nannou"
 edition = "2018"
 
 [dev-dependencies]
-audrey = "0.2"
+audrey = "0.3"
 futures = "0.3"
 hotglsl = { git = "https://github.com/nannou-org/hotglsl", branch = "master" }
 hrtf = "0.2"
@@ -25,6 +25,7 @@ nannou_laser = { version ="0.15.0", features = ["ffi", "ilda-idtf"], path = "../
 nannou_osc = { version ="0.15.0", path = "../nannou_osc" }
 nannou_timeline = { version ="0.15.0", features = ["serde1"], path =  "../nannou_timeline" }
 pitch_calc = { version = "0.12", features = ["serde"] }
+svg = "0.9.0"
 time_calc = { version= "0.13", features = ["serde"] }
 walkdir = "2"
 hound = "3.4.0"
@@ -177,6 +178,11 @@ path = "rust_basics/6_functions.rs"
 [[example]]
 name = "7_modules"
 path = "rust_basics/7_modules/7_modules.rs"
+
+# SVG
+[[example]]
+name = "svg_primitives"
+path = "svg/svg_primitives.rs"
 
 # Template
 [[example]]

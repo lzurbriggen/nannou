@@ -153,21 +153,7 @@ pub fn to_svg(app: &App, draw: &Draw, frame: &Frame) -> Document {
                     document = document.add(e.render_svg_element(ctx));
                 }
                 Primitive::Rect(e) => {
-                    let color = e.polygon.opts.color.unwrap();
-                    let col_string = color_string(color);
-                    let el = SVGRectangle::new()
-                        .set("fill", col_string)
-                        .set(
-                            "x",
-                            e.polygon.opts.position.point.x - e.dimensions.x.unwrap_or(100.0) / 2.0,
-                        )
-                        .set(
-                            "y",
-                            e.polygon.opts.position.point.y + e.dimensions.y.unwrap_or(100.0) / 2.0,
-                        )
-                        .set("width", e.dimensions.x.unwrap_or(100.0))
-                        .set("height", e.dimensions.y.unwrap_or(100.0));
-                    document = document.add(el);
+                    document = document.add(e.render_svg_element(ctx));
                 }
                 Primitive::Text(_) => {}
                 Primitive::Texture(_) => {}
