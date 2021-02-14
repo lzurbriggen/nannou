@@ -1,12 +1,16 @@
-use crate::color::LinSrgba;
-use crate::draw::primitive::path;
-use crate::draw::primitive::{PathStroke, Primitive};
 use crate::draw::properties::spatial::{orientation, position};
 use crate::draw::properties::{ColorScalar, SetColor, SetOrientation, SetPosition, SetStroke};
 use crate::draw::{self, Drawing};
+use crate::draw::{primitive::path, svg_renderer::color_string};
 use crate::geom::{self, pt2, Point2};
 use crate::math::{BaseFloat, Zero};
+use crate::{color::LinSrgba, draw::svg_renderer::SvgRenderContext};
+use crate::{
+    draw::primitive::{PathStroke, Primitive},
+    prelude::Vector2,
+};
 use lyon::tessellation::StrokeOptions;
+use svg::node::element::{path::Data, Line as SVGLine};
 
 /// A path containing only two points - a start and end.
 ///
@@ -165,6 +169,73 @@ impl draw::renderer::RenderPrimitive for Line<f32> {
         );
 
         draw::renderer::PrimitiveRender::default()
+    }
+}
+
+impl draw::svg_renderer::SvgRenderPrimitive<SVGLine> for Line<f32> {
+    fn render_svg_element(self, ctx: SvgRenderContext) -> SVGLine {
+        let Line { path, start, end } = self;
+
+        let start = start.unwrap_or(pt2(0.0, 0.0));
+        let end = end.unwrap_or(pt2(0.0, 0.0));
+        // TODO if start == end {
+        //     return draw::renderer::PrimitiveRender::default();
+        // }
+
+        let global_transform = ctx.transform;
+        let local_transform = path.position.transform() * path.orientation.transform();
+        let transform = global_transform * local_transform;
+
+        let transform_point =
+            |v: Vector2<f32>| cgmath::Transform::transform_point(&transform, v.extend(0.0).into());
+
+        let close = false;
+        let points = [start, end];
+        let points = points.iter().cloned().map(Into::into);
+        let events = lyon::path::iterator::FromPolyline::new(close, points);
+
+        let mut el = SVGLine::new();
+        let cap = match path.opts.start_cap {
+            lyon::lyon_tessellation::LineCap::Butt => "butt",
+            lyon::lyon_tessellation::LineCap::Square => "square",
+            lyon::lyon_tessellation::LineCap::Round => "round",
+        };
+        let color = path.color.unwrap();
+        let col_string = color_string(color);
+        el = el.set("stroke", col_string);
+        el = el.set("stroke-linecap", cap);
+        el = el.set("stroke-width", path.opts.line_width);
+
+        println!("{:?}", path);
+        println!("{:?}", start);
+        println!("{:?}", end);
+
+        for e in events {
+            println!("{:?}", e);
+            match e {
+                lyon::path::Event::Begin { at } => {}
+                lyon::path::Event::Line { from, to } => {
+                    let from = transform_point(Vector2::new(from.x, from.y));
+                    let to = transform_point(Vector2::new(to.x, to.y));
+
+                    el = el
+                        .set("x1", from.x)
+                        .set("y1", -from.y)
+                        .set("x2", to.x)
+                        .set("y2", -to.y);
+                }
+                lyon::path::Event::Quadratic { from, ctrl, to } => {}
+                lyon::path::Event::Cubic {
+                    from,
+                    ctrl1,
+                    ctrl2,
+                    to,
+                } => {}
+                lyon::path::Event::End { last, first, close } => {}
+            }
+        }
+
+        el
     }
 }
 

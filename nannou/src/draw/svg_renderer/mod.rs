@@ -52,7 +52,6 @@ pub fn to_svg(app: &App, draw: &Draw, frame: &Frame) -> Document {
         .window(window_id)
         .expect("no window to draw to for `Draw`'s window_id");
     let win_size = window.inner_size_pixels();
-    println!("{:?}", win_size);
 
     let draw_cmds: Vec<_> = draw.drain_commands().collect();
     let draw_state = draw.state.borrow();
@@ -66,8 +65,6 @@ pub fn to_svg(app: &App, draw: &Draw, frame: &Frame) -> Document {
             win_size.1,
         ),
     );
-
-    println!("{:?}", draw_state.background_color);
 
     if let Some(bg_color) = draw_state.background_color {
         let background = SVGRectangle::new()
@@ -109,35 +106,35 @@ pub fn to_svg(app: &App, draw: &Draw, frame: &Frame) -> Document {
                     document = document.add(e.render_svg_element(ctx));
                 }
                 Primitive::Line(e) => {
-                    println!("{:?}", e.path);
-                    let color = e.path.color.unwrap();
-                    let col_string = color_string(color);
-                    let local_transform =
-                        e.path.position.transform() * e.path.orientation.transform();
+                    // let color = e.path.color.unwrap();
+                    // let col_string = color_string(color);
+                    // let local_transform =
+                    //     e.path.position.transform() * e.path.orientation.transform();
 
-                    let start = e.start.unwrap().extend(0.0);
-                    let start_t =
-                        cgmath::Transform::transform_point(&local_transform, start.into());
+                    // let start = e.start.unwrap().extend(0.0);
+                    // let start_t =
+                    //     cgmath::Transform::transform_point(&local_transform, start.into());
 
-                    let end = e.end.unwrap().extend(0.0);
-                    let end_t = cgmath::Transform::transform_point(&local_transform, end.into());
+                    // let end = e.end.unwrap().extend(0.0);
+                    // let end_t = cgmath::Transform::transform_point(&local_transform, end.into());
 
-                    let cap = match e.path.opts.start_cap {
-                        lyon::lyon_tessellation::LineCap::Butt => "butt",
-                        lyon::lyon_tessellation::LineCap::Square => "square",
-                        lyon::lyon_tessellation::LineCap::Round => "round",
-                    };
+                    // let cap = match e.path.opts.start_cap {
+                    //     lyon::lyon_tessellation::LineCap::Butt => "butt",
+                    //     lyon::lyon_tessellation::LineCap::Square => "square",
+                    //     lyon::lyon_tessellation::LineCap::Round => "round",
+                    // };
 
-                    let el = SVGLine::new()
-                        .set("stroke", col_string)
-                        .set("x1", start_t.x)
-                        .set("y1", -start_t.y)
-                        .set("x2", end_t.x)
-                        .set("y2", -end_t.y)
-                        .set("stroke-width", e.path.opts.line_width)
-                        .set("stroke-linecap", cap);
+                    // let el = SVGLine::new()
+                    //     .set("stroke", col_string)
+                    //     .set("x1", start_t.x)
+                    //     .set("y1", -start_t.y)
+                    //     .set("x2", end_t.x)
+                    //     .set("y2", -end_t.y)
+                    //     .set("stroke-width", e.path.opts.line_width)
+                    //     .set("stroke-linecap", cap);
+                    // document = document.add(el);
 
-                    document = document.add(el);
+                    document = document.add(e.render_svg_element(ctx));
                 }
                 Primitive::MeshVertexless(_) => {}
                 Primitive::Mesh(_) => {}
